@@ -12,10 +12,10 @@ import datetime
 
 opts = {
     "alias": ('кеша', 'инокентий', 'иннокентий', 'кешан'),
-    "tbr": ('скажи', 'расскажи', 'покажи', 'сколько'),
+    "tbr": ('скажи', 'расскажи', 'покажи', 'сколько', 'который', 'включи'),
     "cmds": {
-        "ctime": ('текущее время', 'сейчас времени', 'который час', 'времени'),
-        "radio": ('включи музыку', 'включи радио')
+        "ctime": ('текущее время', 'сейчас времени', 'час', 'времени'),
+        "radio": ('музыку', 'радио')
     }
 }
 
@@ -51,7 +51,7 @@ def callback(recognizer, audio):
     except sr.UnknownValueError:
         print("[log] Голос не распознан")
     except sr.RequestError as e:
-        print("[log] Неизвестная ошибка. Проверьте интернет")
+        print("[log] Неизвестная ошибка." + str(e))
 
 
 def recognizer_cmd(cmd):
@@ -89,8 +89,7 @@ def execute_cmd(cmd):
 rec = sr.Recognizer()
 mic = sr.Microphone(device_index=1)
 with mic as source:
-    rec.adjust_for_ambient_noise(source)  # Слушает фон чтобы отличать фон от речи
-    # audio = rec.listen(source)
+    rec.adjust_for_ambient_noise(source, duration=1)  # Слушает фон чтобы отличать фон от речи
 
 speak_engine = pyttsx3.init()
 
@@ -107,4 +106,3 @@ start_listening = rec.listen_in_background(mic, callback)
 
 while True:
     time.sleep(0.1)
-    # callback
