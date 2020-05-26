@@ -1,9 +1,9 @@
-import os
 import time
 import speech_recognition as sr
 import pyttsx3
 from fuzzywuzzy import fuzz
 import datetime
+import parse_bash
 
 # 0. Установить requirements.txt
 # 1. Установить голоса из add-on/RHVoice-v0.4-a2-setup.exe
@@ -16,7 +16,8 @@ opts = {
     "tbr": ('скажи', 'расскажи', 'покажи', 'сколько', 'который', 'включи'),
     "cmds": {
         "ctime": ('текущее время', 'сейчас времени', 'час', 'времени'),
-        "radio": ('музыку', 'радио')
+        "radio": ('музыку', 'радио'),
+        "joke": ("анекдот", "шутку", "прикол")
     }
 }
 
@@ -40,7 +41,7 @@ speak("Добрый день")
 speak("Кеша слушает")
 
 
-# Функция по нечеткому распознованию комманд
+# Функция по нечеткому распознованию команд
 def recognizer_cmd(cmd):
     rc = {'cmd': "",
           'percent': 0}
@@ -58,8 +59,8 @@ def recognizer_cmd(cmd):
     return rc
 
 
-# основная функция, которая прослушивает микрофон, переводит голос в текст, вычленяет комманду
-# и запускает на выполнение распознавалку комманд
+# основная функция, которая прослушивает микрофон, переводит голос в текст, вычленяет команду
+# и запускает на выполнение распознавалку команд
 def command():
     # Запуск
     rec = sr.Recognizer()
@@ -87,6 +88,7 @@ def command():
             for x in opts["tbr"]:
                 cmd = cmd.replace(x, "").strip()
 
+            print("[log] Команда: " + cmd)
             # распознаем и выполняем команду
             cmd = recognizer_cmd(cmd)
     except sr.UnknownValueError:
@@ -94,20 +96,25 @@ def command():
         cmd = command()
     except sr.RequestError as e:
         print("[log] Неизвестная ошибка." + str(e))
-        cmd = command()
 
     return cmd
 
 
-# Функция в которой прописаны действия на ту или иную комманду
+# Функция в которой прописаны действия на ту или иную команду
 def execute_cmd(cmd):
-    cmd = cmd['cmd']
+    if len(cmd) > 0:
+        cmd = cmd['cmd']
+    else:
+        return
     if cmd == 'ctime':
         # Сказать текущее время
         now = datetime.datetime.now()
         speak("Сейчас " + str(now.hour) + ":" + str(now.minute))
     elif cmd == 'radio':
         speak("Нужно добавить радио в настройки")
+    elif cmd == 'joke':
+        joke_str = parse_bash.get_joke()
+        speak(joke_str)
 
     else:
         str_else = "Команда не распознана, повторите"
@@ -115,7 +122,7 @@ def execute_cmd(cmd):
         speak(str_else)
 
 
-# Бесконечный цикл на вызов функции прослушивания микрофона и выполнения комманд
+# Бесконечный цикл на вызов функции прослушивания микрофона и выполнения команд
 while True:
     time.sleep(1)
     execute_cmd(command())
