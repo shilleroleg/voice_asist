@@ -10,6 +10,7 @@ import datetime
 # 2. Установить PyAudio из папки add-on. Из pypi устанавливается с ошибкой
 # 3. Установить python-Levenshtein из папки add-on.
 
+
 opts = {
     "alias": ('кеша', 'инокентий', 'иннокентий', 'кешан'),
     "tbr": ('скажи', 'расскажи', 'покажи', 'сколько', 'который', 'включи'),
@@ -19,7 +20,14 @@ opts = {
     }
 }
 
+# Инициализируем голосовой движок
+speak_engine = pyttsx3.init()
+voices = speak_engine.getProperty('voices')
+# voice_id = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices\\TokenEnums\\RHVoice\\Aleksandr'
+speak_engine.setProperty('voice', voices[4].id)
 
+
+# Функция на вход принимает строку и проговаривает ее
 def speak(what):
     print(what)
     speak_engine.say(what)
@@ -27,33 +35,12 @@ def speak(what):
     speak_engine.stop()
 
 
-def callback(recognizer, audio):
-    try:
-        voice = recognizer.recognize_google(audio, language="ru-RU").lower()
-        print("[log] Распознано: " + voice)
-
-        # Если обращаемся к помошнику
-        if voice.startswith(opts["alias"]):
-            cmd = voice
-
-            # Удаляем обращение к помошнику
-            for x in opts["alias"]:
-                cmd = cmd.replace(x, "").strip()
-
-            # Удаляем вводные слова
-            # Остается чистая команда
-            for x in opts["tbr"]:
-                cmd = cmd.replace(x, "").strip()
-
-            # распзнаем и выполняем команду
-            cmd = recognizer_cmd(cmd)
-            execute_cmd(cmd['cmd'])
-    except sr.UnknownValueError:
-        print("[log] Голос не распознан")
-    except sr.RequestError as e:
-        print("[log] Неизвестная ошибка." + str(e))
+# Произноим приветственные фразы
+speak("Добрый день")
+speak("Кеша слушает")
 
 
+# Функция по нечеткому распознованию комманд
 def recognizer_cmd(cmd):
     rc = {'cmd': "",
           'percent': 0}
@@ -71,7 +58,50 @@ def recognizer_cmd(cmd):
     return rc
 
 
+# основная функция, которая прослушивает микрофон, переводит голос в текст, вычленяет комманду
+# и запускает на выполнение распознавалку комманд
+def command():
+    # Запуск
+    rec = sr.Recognizer()
+    mic = sr.Microphone(device_index=1)
+    with mic as source:
+        rec.pause_threshold = 1
+        rec.adjust_for_ambient_noise(source, duration=1)  # Слушает фон чтобы отличать фон от речи
+        audio = rec.listen(source)
+
+    cmd = []
+    try:
+        voice = rec.recognize_google(audio, language="ru-RU").lower()
+        print("[log] Распознано: " + voice)
+
+        # Если обращаемся к помошнику
+        if voice.startswith(opts["alias"]):
+            cmd = voice
+
+            # Удаляем обращение к помошнику
+            for x in opts["alias"]:
+                cmd = cmd.replace(x, "").strip()
+
+            # Удаляем вводные слова
+            # Остается чистая команда
+            for x in opts["tbr"]:
+                cmd = cmd.replace(x, "").strip()
+
+            # распознаем и выполняем команду
+            cmd = recognizer_cmd(cmd)
+    except sr.UnknownValueError:
+        print("[log] Голос не распознан")
+        cmd = command()
+    except sr.RequestError as e:
+        print("[log] Неизвестная ошибка." + str(e))
+        cmd = command()
+
+    return cmd
+
+
+# Функция в которой прописаны действия на ту или иную комманду
 def execute_cmd(cmd):
+    cmd = cmd['cmd']
     if cmd == 'ctime':
         # Сказать текущее время
         now = datetime.datetime.now()
@@ -85,24 +115,7 @@ def execute_cmd(cmd):
         speak(str_else)
 
 
-# Запуск
-rec = sr.Recognizer()
-mic = sr.Microphone(device_index=1)
-with mic as source:
-    rec.adjust_for_ambient_noise(source, duration=1)  # Слушает фон чтобы отличать фон от речи
-
-speak_engine = pyttsx3.init()
-
-voices = speak_engine.getProperty('voices')
-# voice_id = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices\\TokenEnums\\RHVoice\\Aleksandr'
-speak_engine.setProperty('voice', voices[4].id)
-
-# Произноим приветственные фразы
-speak("Добрый день")
-speak("Кеша слушает")
-
-# Начинаем слушать микрофон в фоне
-start_listening = rec.listen_in_background(mic, callback)
-
+# Бесконечный цикл на вызов функции прослушивания микрофона и выполнения комманд
 while True:
-    time.sleep(0.1)
+    time.sleep(1)
+    execute_cmd(command())
